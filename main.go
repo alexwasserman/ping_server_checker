@@ -67,6 +67,7 @@ func pingServer(server string, quiet bool) bool {
 	}
 	pinger.Count = 3
 	pinger.Timeout = time.Second * 5
+	pinger.SetPrivileged(true)
 
 	err = pinger.Run()
 	if err != nil {
