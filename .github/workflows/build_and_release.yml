@@ -36,7 +36,10 @@ jobs:
       - name: Compile binary
         run: |
           go mod download
-          go build -o ping_server_checker ./main.go  # Replace with the correct path to your Go file
+          go get -u github.com/go-ping/ping
+          go get -u golang.org/x/net
+          go mod download
+          go build -o ping_server_checker ./main.go
 
       - name: Archive binary
         run: zip -r ping_server_checker.zip ping_server_checker
