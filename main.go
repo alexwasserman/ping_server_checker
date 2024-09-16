@@ -13,6 +13,7 @@ import (
 )
 
 func main() {
+
 	// Define the -file and -quiet flags
 	fileFlag := flag.String("file", "", "Path to file containing server hostnames, one per line")
 	quietFlag := flag.Bool("quiet", false, "Suppress non-error output")
@@ -52,9 +53,12 @@ func main() {
 		if !*quietFlag {
 			fmt.Println("Some servers are unresponsive. Check logs for details.")
 		}
+		os.Exit(1)
 	} else if !*quietFlag {
 		fmt.Println("All servers are responsive.")
+		os.Exit(0)
 	}
+
 }
 
 // pingServer pings a server and returns true if it's responsive, false otherwise
