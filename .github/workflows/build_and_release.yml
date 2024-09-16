@@ -21,7 +21,7 @@ jobs:
       - name: Set up Go environment
         uses: actions/setup-go@v4
         with:
-          go-version: "1.23.1" # Adjust the version as per your needs
+          go-version: "1.23.1"
 
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -51,20 +51,50 @@ jobs:
           path: ping_server_checker.zip
 
   release:
-    name: Create GitHub Release
+    name: Create GitHub Release with Semantic Versioning
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       - name: Download Build Artifact
         uses: actions/download-artifact@v3
         with:
           name: ping_server_checker
 
+      - name: Get current version tag
+        id: get_version
+        run: |
+          latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
+          echo "Latest tag: $latest_tag"
+          echo "::set-output name=latest_tag::$latest_tag"
+
+      - name: Bump version
+        id: bump_version
+        run: |
+          latest_tag=${{ steps.get_version.outputs.latest_tag }}
+          # Remove 'v' prefix and increment the patch version
+          latest_version=$(echo $latest_tag | sed 's/^v//')
+          IFS='.' read -r major minor patch <<< "$latest_version"
+          new_patch=$((patch+1))
+          new_tag="v$major.$minor.$new_patch"
+          echo "New tag: $new_tag"
+          echo "::set-output name=new_tag::$new_tag"
+
+      - name: Create new version tag
+        uses: actions-ecosystem/action-create-tag@v1
+        with:
+          tag: ${{ steps.bump_version.outputs.new_tag }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ steps.bump_version.outputs.new_tag }}
+          name: Release ${{ steps.bump_version.outputs.new_tag }}
           files: ping_server_checker.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
