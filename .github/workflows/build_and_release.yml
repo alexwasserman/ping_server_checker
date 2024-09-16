@@ -59,6 +59,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch all tags
 
       - name: Download Build Artifact
         uses: actions/download-artifact@v3
@@ -69,6 +71,9 @@ jobs:
         id: get_version
         run: |
           latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
+          if [ -z "$latest_tag" ]; then
+            latest_tag="v0.0.0"  # Default if no tags exist
+          fi
           echo "Latest tag: $latest_tag"
           echo "::set-output name=latest_tag::$latest_tag"
 
@@ -76,7 +81,6 @@ jobs:
         id: bump_version
         run: |
           latest_tag=${{ steps.get_version.outputs.latest_tag }}
-          # Remove 'v' prefix and increment the patch version
           latest_version=$(echo $latest_tag | sed 's/^v//')
           IFS='.' read -r major minor patch <<< "$latest_version"
           new_patch=$((patch+1))
@@ -84,11 +88,13 @@ jobs:
           echo "New tag: $new_tag"
           echo "::set-output name=new_tag::$new_tag"
 
-      - name: Create new version tag
-        uses: actions-ecosystem/action-create-tag@v1
-        with:
-          tag: ${{ steps.bump_version.outputs.new_tag }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create and push new tag
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          new_tag=${{ steps.bump_version.outputs.new_tag }}
+          git tag $new_tag
+          git push origin $new_tag
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
